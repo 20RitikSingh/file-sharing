@@ -3,29 +3,39 @@ package main
 import (
 	"fmt"
 	"net/http"
-	"os"
+
+	"github.com/skip2/go-qrcode"
 )
 
-const uploadDirectory = "./uploads/"
-const fileDirectory = "./"
-
 func main() {
-	// Create the uploads directory if it doesn't exist
-	err := os.MkdirAll(uploadDirectory, os.ModePerm)
+
+	// Define handlers for file upload and download
+	// http.HandleFunc("/upload", uploadFormHandler)
+	http.HandleFunc("/upload", uploadHandler)
+	http.HandleFunc("/", mainHandler)
+	http.HandleFunc("/download/", downloadHandler)
+
+	ip, err := getWLANIPAddress()
 	if err != nil {
-		fmt.Println("Error creating upload directory:", err)
+		fmt.Printf("Error: %v\n", err)
 		return
 	}
 
-	// Define handlers for file upload and download
-	http.HandleFunc("/upload", uploadHandler)
-	http.HandleFunc("/", listHandler)
-	http.HandleFunc("/download/", downloadHandler)
-
+	fmt.Printf("WLAN IP address: %s\n", ip)
 	// Start the server and listen on port 8080
 	fmt.Println("File-sharing server listening on :8080")
-	err = http.ListenAndServe(":8080", nil)
+	qrCode, err := qrcode.New(ip.To16().String()+":8080", qrcode.Medium)
+	if err != nil {
+		fmt.Println("Error generating QR code:", err)
+		return
+	}
+
+	// Print QR code to the terminal
+	fmt.Println(string(qrCode.ToString(false)))
+	err = http.ListenAndServe(ip.To16().String()+":8080", nil)
 	if err != nil {
 		fmt.Println("Error:", err)
+		return
 	}
+
 }
